@@ -1,5 +1,5 @@
 import { getPosition } from 'suncalc'
-import { BufferGeometry, DoubleSide, Float32BufferAttribute, Group, LineBasicMaterial, LineDashedMaterial, LineLoop, MathUtils, Mesh, MeshBasicMaterial } from 'three'
+import { BufferGeometry, DoubleSide, Float32BufferAttribute, Group, LineBasicMaterial, LineDashedMaterial, Line, MathUtils, Mesh, MeshBasicMaterial } from 'three'
 
 class SunPath {
   constructor(params, sunSphere, sunLight, base) {
@@ -52,8 +52,12 @@ class SunPath {
           transparent: true,
           opacity: 0.7
         })
+        // Manually close the loop by appending the first vertex
+        if (vertices.length >= 3) {
+          vertices.push(vertices[0], vertices[1], vertices[2])
+        }
         geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3))
-        let analemma = new LineLoop(geometry, analemmaMaterial)
+        let analemma = new Line(geometry, analemmaMaterial)
         analemma.computeLineDistances()
         analemmas.add(analemma)
         analemmas.name = 'analemmaPath'
@@ -96,7 +100,7 @@ class SunPath {
         color: 'yellow',
         side: DoubleSide,
         transparent: true,
-        opacity: 0.1,
+        opacity: 0.01,
       })
       surfaceGeometry.setAttribute('position', new Float32BufferAttribute(vertices, 3))
       let surfaceMesh = new Mesh(surfaceGeometry, surfaceMaterial)
@@ -156,8 +160,12 @@ class SunPath {
         let sunPosition = this.getSunPosition(date)
         positions.push(sunPosition.x, sunPosition.y, sunPosition.z)
       }
+      // Manually close the loop by appending the first vertex
+      if (positions.length >= 3) {
+        positions.push(positions[0], positions[1], positions[2])
+      }
       geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
-      let path = new LineLoop(geometry, pathMaterial)
+      let path = new Line(geometry, pathMaterial)
       path.name = 'dayPath'
       this.sunPathLight.add(path)
     } else {

@@ -11,12 +11,13 @@ import { createSunSphere } from './components/sunSphere.js'
 import { createGUI } from './systems/gui.js'
 import { createControls } from './systems/controls.js'
 import { createRenderer } from './systems/renderer.js'
-import { createPostProcessing } from './systems/PostProcessing.js'
+import { createRenderPipeline } from './systems/RenderPipeline.js'
 import { Resizer } from './systems/Resizer.js'
 import { Loop } from './systems/Loop.js'
 import { SunPath } from './systems/SunPath.js'
 import { DynamicSky } from './systems/DynamicSky.js'
 import { createPlayer } from './systems/player.js'
+import { createBackendIndicator } from './systems/backendIndicator.js'
 
 import gsap from 'gsap'
 
@@ -46,27 +47,10 @@ const skyControl = {
   exposure: 2.3
 }
 
-const cameraControl = {
-  firstPerson() {
-    activeCamera = firstPersonCamera
-    loop.camera = firstPersonCamera
-    resizer.camera = firstPersonCamera
-    postProcessing.setCamera(firstPersonCamera)
-    resizer.onResize()
-  },
-  birdView() {
-    activeCamera = birdCamera
-    loop.camera = birdCamera
-    resizer.camera = birdCamera
-    postProcessing.setCamera(birdCamera)
-    resizer.onResize()
-  }
-}
-
-let tl = gsap.timeline({ repeta: -1 })
+let tl = gsap.timeline({ repeat: -1 })
 
 let activeCamera, birdCamera, firstPersonCamera
-let renderer, postProcessing
+let renderer, renderPipeline
 let scene
 let loop
 let controls
@@ -74,17 +58,33 @@ let resizer
 
 class World {
   constructor(container) {
+    this.container = container
+    this.initialized = false
+  }
+
+  async init() {
+    // Initialize cameras
     birdCamera = createBirdCamera()
     firstPersonCamera = createFirstPersonCamera()
     activeCamera = birdCamera
 
+    // Create scene
     scene = createScene()
-    renderer = createRenderer()
-    postProcessing = createPostProcessing(scene, activeCamera, renderer)
-    loop = new Loop(activeCamera, scene, renderer, postProcessing.composer)
-    container.append(renderer.domElement)
+
+    // Initialize WebGPU renderer (async)
+    renderer = await createRenderer()
+
+    // Create render pipeline with SSGI
+    renderPipeline = createRenderPipeline(scene, activeCamera, renderer)
+
+    // Setup render loop
+    loop = new Loop(activeCamera, scene, renderer, renderPipeline)
+    this.container.append(renderer.domElement)
+
+    // Setup controls
     controls = createControls(activeCamera, renderer.domElement)
 
+    // Setup lights
     const { ambientLight, sunLight } = createLights()
     sunLight.shadow.camera.top = params.radius
     sunLight.shadow.camera.bottom = - params.radius
@@ -108,13 +108,37 @@ class World {
 
     loop.updatables.push(base, controls, sunPath, sky)
 
-    scene.add(sky.sky, ambientLight, sunHelper, sunShadowHelper, sunPath.sunPathLight)
+    // Add rendering backend indicator (WebGPU / WebGL2)
+    createBackendIndicator(renderer)
 
-    this.gui = createGUI(params, ambientLight, sunLight, sunHelper, sunShadowHelper, sunPath, controls, skyControl, cameraControl, postProcessing)
-    resizer = new Resizer(container, activeCamera, renderer, postProcessing)
-  }
+    scene.add(sky.sky)
+    scene.add(ambientLight)
+    scene.add(sunHelper)
+    scene.add(sunShadowHelper)
+    scene.add(sunPath.sunPathLight)
 
-  async init() {
+    // Setup camera controls for GUI
+    const cameraControl = {
+      firstPerson: () => {
+        activeCamera = firstPersonCamera
+        loop.camera = activeCamera
+        resizer.camera = activeCamera
+        controls.object = activeCamera
+        renderPipeline.setCamera(activeCamera)
+      },
+      birdView: () => {
+        activeCamera = birdCamera
+        loop.camera = activeCamera
+        resizer.camera = activeCamera
+        controls.object = activeCamera
+        renderPipeline.setCamera(activeCamera)
+      }
+    }
+
+    this.gui = createGUI(params, ambientLight, sunLight, sunHelper, sunShadowHelper, sunPath, controls, skyControl, cameraControl, renderPipeline)
+    resizer = new Resizer(this.container, activeCamera, renderer, renderPipeline)
+
+    // Load models
     const { house } = await loadHouse()
     const birds = await loadBirds()
     for (var b = 0; b < birds.children.length; b++) {
@@ -124,9 +148,15 @@ class World {
     tl.to(birds.position, { duration: 60, delay: 1, x: 100, z: 120 })
     const player = createPlayer(firstPersonCamera, house)
     loop.updatables.push(player)
+
+    this.initialized = true
   }
 
   start() {
+    if (!this.initialized) {
+      console.warn('World not initialized. Call init() first.')
+      return
+    }
     loop.start()
   }
 

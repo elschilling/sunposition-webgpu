@@ -1,23 +1,23 @@
-const setSize = (container, camera, renderer, postProcessing = null) => {
+const setSize = (container, camera, renderer, renderPipeline = null) => {
   camera.aspect = container.clientWidth / container.clientHeight;
   camera.updateProjectionMatrix();
 
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
 
-  if (postProcessing) {
-    postProcessing.updateSize(container.clientWidth, container.clientHeight);
+  if (renderPipeline) {
+    renderPipeline.updateSize(container.clientWidth, container.clientHeight);
   }
 };
 
 class Resizer {
-  constructor(container, camera, renderer, postProcessing = null) {
+  constructor(container, camera, renderer, renderPipeline = null) {
     this.container = container
     this.camera = camera
     this.renderer = renderer
-    this.postProcessing = postProcessing
+    this.renderPipeline = renderPipeline
     // set initial size on load
-    setSize(container, camera, renderer, postProcessing);
+    setSize(container, camera, renderer, renderPipeline);
 
     window.addEventListener('resize', () => {
       // set the size again if a resize occurs
@@ -28,7 +28,7 @@ class Resizer {
   }
 
   onResize() {
-    setSize(this.container, this.camera, this.renderer, this.postProcessing);
+    setSize(this.container, this.camera, this.renderer, this.renderPipeline);
   }
 }
 

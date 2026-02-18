@@ -1,6 +1,6 @@
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js'
 
-function createGUI(params, ambientLight, sunLight, sunHelper, shadowCameraHelper, sunPath, controls, skyControl, cameraControl, postProcessing = null) {
+function createGUI(params, ambientLight, sunLight, sunHelper, shadowCameraHelper, sunPath, controls, skyControl, cameraControl, renderPipeline = null) {
   const gui = new GUI()
   gui.close()
 
@@ -51,34 +51,61 @@ function createGUI(params, ambientLight, sunLight, sunHelper, shadowCameraHelper
   sunsurfaceFolder.add(sunPath.sunPathLight.children[1], 'visible',).name('Orientation')
   sunsurfaceFolder.close()
 
-  // SSGI Controls
-  if (postProcessing) {
-    const ssgiFolder = gui.addFolder('SSGI (Screen Space GI)')
-    const ssgiPass = postProcessing.ssgiPass || postProcessing.ssaoPass
+  // SSGI Controls for WebGPU SSGINode (r183)
+  if (renderPipeline && renderPipeline.ssgiNode) {
+    const ssgiFolder = gui.addFolder('SSGI (Screen Space Global Illumination)')
+    const ssgiNode = renderPipeline.ssgiNode
 
     // Create a proxy object for SSGI parameters
     const ssgiParams = {
-      enabled: ssgiPass ? ssgiPass.enabled : false,
-      kernelRadius: ssgiPass ? (ssgiPass.kernelRadius || ssgiPass.radius) : 16,
-      minDistance: ssgiPass ? (ssgiPass.minDistance || 0.005) : 0.005,
-      maxDistance: ssgiPass ? (ssgiPass.maxDistance || 0.1) : 0.1
+      enabled: true,
+      radius: ssgiNode.radius.value,
+      sliceCount: ssgiNode.sliceCount.value,
+      stepCount: ssgiNode.stepCount.value,
+      aoIntensity: ssgiNode.aoIntensity.value,
+      giIntensity: ssgiNode.giIntensity.value,
+      thickness: ssgiNode.thickness.value,
+      useScreenSpaceSampling: ssgiNode.useScreenSpaceSampling.value
     }
 
     ssgiFolder.add(ssgiParams, 'enabled').name('Enabled').onChange((value) => {
-      if (ssgiPass) ssgiPass.enabled = value
-    })
-    ssgiFolder.add(ssgiParams, 'kernelRadius').min(0).max(64).step(1).name('Kernel Radius').onChange((value) => {
-      if (ssgiPass) {
-        if (ssgiPass.kernelRadius !== undefined) ssgiPass.kernelRadius = value
-        if (ssgiPass.radius !== undefined) ssgiPass.radius = value
+      if (ssgiNode) {
+        if (value) {
+          ssgiNode.radius.value = ssgiParams.radius
+        } else {
+          ssgiNode.radius.value = 0
+        }
       }
     })
-    ssgiFolder.add(ssgiParams, 'minDistance').min(0.0001).max(0.01).step(0.0001).name('Min Distance').onChange((value) => {
-      if (ssgiPass && ssgiPass.minDistance) ssgiPass.minDistance = value
+
+    ssgiFolder.add(ssgiParams, 'radius').min(0).max(50).step(0.5).name('Radius').onChange((value) => {
+      if (ssgiNode) ssgiNode.radius.value = value
     })
-    ssgiFolder.add(ssgiParams, 'maxDistance').min(0.01).max(1).step(0.01).name('Max Distance').onChange((value) => {
-      if (ssgiPass && ssgiPass.maxDistance) ssgiPass.maxDistance = value
+
+    ssgiFolder.add(ssgiParams, 'sliceCount').min(1).max(4).step(1).name('Slice Count').onChange((value) => {
+      if (ssgiNode) ssgiNode.sliceCount.value = value
     })
+
+    ssgiFolder.add(ssgiParams, 'stepCount').min(1).max(32).step(1).name('Step Count').onChange((value) => {
+      if (ssgiNode) ssgiNode.stepCount.value = value
+    })
+
+    ssgiFolder.add(ssgiParams, 'aoIntensity').min(0).max(4).step(0.1).name('AO Intensity').onChange((value) => {
+      if (ssgiNode) ssgiNode.aoIntensity.value = value
+    })
+
+    ssgiFolder.add(ssgiParams, 'giIntensity').min(0).max(100).step(1).name('GI Intensity').onChange((value) => {
+      if (ssgiNode) ssgiNode.giIntensity.value = value
+    })
+
+    ssgiFolder.add(ssgiParams, 'thickness').min(0.01).max(10).step(0.01).name('Thickness').onChange((value) => {
+      if (ssgiNode) ssgiNode.thickness.value = value
+    })
+
+    ssgiFolder.add(ssgiParams, 'useScreenSpaceSampling').name('Screen Space Sampling').onChange((value) => {
+      if (ssgiNode) ssgiNode.useScreenSpaceSampling.value = value
+    })
+
     ssgiFolder.close()
   }
 

@@ -1,11 +1,22 @@
-import { PCFSoftShadowMap, ReinhardToneMapping, SRGBColorSpace, WebGLRenderer } from 'three'
+import { WebGPURenderer } from 'three/webgpu'
 
-function createRenderer() {
-  const renderer = new WebGLRenderer({ antialias: true })
+async function createRenderer() {
+  const renderer = new WebGPURenderer({
+    antialias: true,
+    forceWebGPU: true
+  })
+
+  // WebGPU renderer requires async initialization
+  await renderer.init()
+
+  // Enable shadow maps
   renderer.shadowMap.enabled = true
-  renderer.shadowMap.type = PCFSoftShadowMap
-  renderer.toneMapping = ReinhardToneMapping
-  renderer.outputColorSpace = SRGBColorSpace
+
+  // Set pixel ratio for better quality
+  renderer.setPixelRatio(window.devicePixelRatio)
+
+  // Detect active backend for UI notification
+  renderer.backendType = renderer.backend.type || (renderer.isWebGPU ? 'webgpu' : 'webgl2')
 
   return renderer
 }
