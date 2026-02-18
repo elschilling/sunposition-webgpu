@@ -15,9 +15,6 @@ async function createRenderer() {
   // Set pixel ratio for better quality
   renderer.setPixelRatio(window.devicePixelRatio)
 
-  // Detect active backend for UI notification
-  renderer.backendType = renderer.backend.type || (renderer.isWebGPU ? 'webgpu' : 'webgl2')
-
   return renderer
 }
 

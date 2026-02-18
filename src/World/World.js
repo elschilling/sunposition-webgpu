@@ -17,7 +17,6 @@ import { Loop } from './systems/Loop.js'
 import { SunPath } from './systems/SunPath.js'
 import { DynamicSky } from './systems/DynamicSky.js'
 import { createPlayer } from './systems/player.js'
-import { createBackendIndicator } from './systems/backendIndicator.js'
 
 import gsap from 'gsap'
 
@@ -107,9 +106,6 @@ class World {
     sunShadowHelper.visible = false
 
     loop.updatables.push(base, controls, sunPath, sky)
-
-    // Add rendering backend indicator (WebGPU / WebGL2)
-    createBackendIndicator(renderer)
 
     scene.add(sky.sky)
     scene.add(ambientLight)
