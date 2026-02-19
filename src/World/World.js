@@ -70,11 +70,13 @@ class World {
     // Create scene
     scene = createScene()
 
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+
     // Initialize WebGPU renderer (async)
     renderer = await createRenderer()
 
     // Create render pipeline with SSGI
-    renderPipeline = createRenderPipeline(scene, activeCamera, renderer)
+    renderPipeline = createRenderPipeline(scene, activeCamera, renderer, isMobile)
 
     // Setup render loop
     loop = new Loop(activeCamera, scene, renderer, renderPipeline)

@@ -13,7 +13,7 @@ const defaultSSGIParams = {
     useScreenSpaceSampling: true
 }
 
-function createRenderPipeline(scene, camera, renderer) {
+function createRenderPipeline(scene, camera, renderer, isMobile) {
     // Create the render pipeline handler
     const renderPipeline = new RenderPipeline(renderer)
 
@@ -41,8 +41,13 @@ function createRenderPipeline(scene, camera, renderer) {
 
     // Apply quality defaults to SSGI
     ssgiNode.radius.value = defaultSSGIParams.radius
-    ssgiNode.sliceCount.value = defaultSSGIParams.sliceCount
-    ssgiNode.stepCount.value = defaultSSGIParams.stepCount
+    if (isMobile) {
+        ssgiNode.sliceCount.value = 1
+        ssgiNode.stepCount.value = 1
+    } else {
+        ssgiNode.sliceCount.value = 4
+        ssgiNode.stepCount.value = 32
+    }
     ssgiNode.aoIntensity.value = defaultSSGIParams.aoIntensity
     ssgiNode.giIntensity.value = defaultSSGIParams.giIntensity
     ssgiNode.thickness.value = defaultSSGIParams.thickness
