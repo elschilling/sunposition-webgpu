@@ -13,6 +13,18 @@ class SunPath {
     this.sphereLight = new Group()
     this.sphereLight.add(sunSphere, sunLight)
     this.sunPathLight.add(this.sphereLight, base)
+
+    // Initialize materials and objects
+    this.dayPathMaterial = new LineBasicMaterial({
+      color: 'red',
+      linewidth: 5,
+      transparent: true,
+      opacity: 0.5
+    })
+    this.dayPathGeometry = new BufferGeometry()
+    this.dayPath = null
+    this.lastDayDrawn = null
+
     this.drawSunDayPath()
     this.drawSunSurface()
     this.drawAnalemmas()
@@ -145,15 +157,14 @@ class SunPath {
 
   drawSunDayPath() {
     if (this.params.showSunDayPath) {
-      let dayPath = this.sunPathLight.getObjectByName('dayPath')
-      this.sunPathLight.remove(dayPath)
-      let pathMaterial = new LineBasicMaterial({
-        color: 'red',
-        linewidth: 5,
-        transparent: true,
-        opacity: 0.5
-      })
-      let geometry = new BufferGeometry()
+      // Create line only if it doesn't exist
+      if (!this.dayPath) {
+        this.dayPath = new Line(this.dayPathGeometry, this.dayPathMaterial)
+        this.dayPath.name = 'dayPath'
+        this.sunPathLight.add(this.dayPath)
+      }
+
+      // Update geometry positions
       let positions = []
       for (let h = 0; h < 24; h++) {
         let date = new Date(this.date).setHours(h)
@@ -164,13 +175,18 @@ class SunPath {
       if (positions.length >= 3) {
         positions.push(positions[0], positions[1], positions[2])
       }
-      geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
-      let path = new Line(geometry, pathMaterial)
-      path.name = 'dayPath'
-      this.sunPathLight.add(path)
+
+      this.dayPathGeometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
+      this.dayPathGeometry.attributes.position.needsUpdate = true
+
+      // Update tracking
+      this.lastDayDrawn = new Date(this.date).setHours(0, 0, 0, 0)
+
     } else {
-      let dayPath = this.sunPathLight.getObjectByName('dayPath')
-      this.sunPathLight.remove(dayPath)
+      if (this.dayPath) {
+        this.sunPathLight.remove(this.dayPath)
+        this.dayPath = null
+      }
     }
   }
 
@@ -184,8 +200,14 @@ class SunPath {
       this.params.hour = new Date(this.date).getHours()
       this.params.day = new Date(this.date).getDate()
       this.params.month = new Date(this.date).getMonth()
+
       this.updateSunPosition()
-      this.drawSunDayPath()
+
+      // Only redraw path if day changed
+      const currentDay = new Date(this.date).setHours(0, 0, 0, 0)
+      if (currentDay !== this.lastDayDrawn) {
+        this.drawSunDayPath()
+      }
     }
   }
 }
